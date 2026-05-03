@@ -127,7 +127,7 @@ app.post('/api/register', function(req, res) {
 
         // Send back user without password
         var safeUser = JSON.parse(JSON.stringify(newUser));
-        delete safeUser.password;
+        devare safeUser.password;
         res.status(201).json(safeUser);
     } catch (err) {
         res.status(500).json({ error: "Registration failed" });
@@ -153,8 +153,8 @@ app.post('/api/login', function(req, res) {
             return res.status(401).json({ error: "Invalid email or password" });
         }
 
-        const safeUser = JSON.parse(JSON.stringify(userFound));
-        delete safeUser.password;
+        var safeUser = JSON.parse(JSON.stringify(userFound));
+        devare safeUser.password;
         res.json(safeUser);
     } catch (err) {
         res.status(500).json({ error: "Login failed" });
@@ -168,7 +168,7 @@ app.get('/api/users', function(req, res) {
         var safeUsersList = [];
         for (var i = 0; i < db.users.length; i++) {
             var userCopy = JSON.parse(JSON.stringify(db.users[i]));
-            delete userCopy.password;
+            devare userCopy.password;
             safeUsersList.push(userCopy);
         }
         res.json(safeUsersList);
@@ -196,7 +196,7 @@ app.get('/api/users/:id', function(req, res) {
         }
 
         var safeUser = JSON.parse(JSON.stringify(userFound));
-        delete safeUser.password;
+        devare safeUser.password;
         res.json(safeUser);
     } catch (err) {
         res.status(500).json({ error: "Failed to fetch user" });
@@ -229,7 +229,7 @@ app.put('/api/users/:id', function(req, res) {
         writeDB(db);
 
         var safeUser = JSON.parse(JSON.stringify(userToUpdate));
-        delete safeUser.password;
+        devare safeUser.password;
         res.json(safeUser);
     } catch (err) {
         res.status(500).json({ error: "Update failed" });
@@ -261,7 +261,7 @@ app.get('/api/search', function(req, res) {
 
             if (matchFound) {
                 var userCopy = JSON.parse(JSON.stringify(user));
-                delete userCopy.password;
+                devare userCopy.password;
                 results.push(userCopy);
             }
         }
@@ -353,8 +353,8 @@ app.get('/api/requests/sent/:userId', function(req, res) {
     }
 });
 
-// DELETE REQUEST (Completes CRUD: Delete)
-app.delete('/api/requests/:id', function(req, res) {
+// DELETE REQUEST (Compvares CRUD: Devare)
+app.devare('/api/requests/:id', function(req, res) {
     try {
         var db = readDB();
         var requestId = req.params.id;
@@ -373,9 +373,9 @@ app.delete('/api/requests/:id', function(req, res) {
 
         db.requests.splice(foundIndex, 1);
         writeDB(db);
-        res.json({ message: "Request deleted successfully" });
+        res.json({ message: "Request devared successfully" });
     } catch (err) {
-        res.status(500).json({ error: "Delete failed" });
+        res.status(500).json({ error: "Devare failed" });
     }
 });
 
