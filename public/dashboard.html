@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - SkillSwap</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* DASHBOARD SPECIFIC STYLES */
+        .welcome-banner {
+            background: var(--primary-light);
+            padding: 40px;
+            border-radius: 20px;
+            margin: 30px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 40px 0 20px;
+        }
+        .scroll-container {
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            padding: 10px 5px 25px;
+            scroll-behavior: smooth;
+        }
+        .scroll-container::-webkit-scrollbar { height: 6px; }
+        .scroll-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+        
+        .user-card {
+            min-width: 300px;
+            max-width: 300px;
+            flex-shrink: 0;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            background: var(--bg-card);
+            border: 1.5px dashed var(--border);
+            border-radius: 14px;
+            color: var(--text-light);
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container animate-fade">
+        <!-- Welcome Banner -->
+        <div class="welcome-banner">
+            <div>
+                <h1 id="welcome-msg">Hello Student!</h1>
+                <p id="current-date" class="small-labels" style="font-size: 16px; margin-top: 5px;"></p>
+            </div>
+            <div style="font-size: 48px;">🌿</div>
+        </div>
+
+        <div class="section-header">
+            <h2>Learn From</h2>
+            <p class="small-labels">People who know what you want to learn</p>
+        </div>
+        <div id="learn-list" class="scroll-container">
+            <div class="empty-state">Finding matches...</div>
+        </div>
+
+        <div class="section-header">
+            <h2>Teach Someone</h2>
+            <p class="small-labels">People who want to learn what you know</p>
+        </div>
+        <div id="teach-list" class="scroll-container">
+            <div class="empty-state">Finding matches...</div>
+        </div>
+    </div>
+
+    <!-- Request Modal -->
+    <div id="request-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="modal-title">Ask for Help</h3>
+            <p id="modal-subtitle" class="small-labels" style="margin-bottom: 20px;"></p>
+            <div class="form-group">
+                <label>Write your message...</label>
+                <textarea id="request-msg" style="height: 120px;" placeholder="Hi! I'd love to learn from you."></textarea>
+            </div>
+            <div id="modal-error" style="color: var(--danger); font-size: 13px; margin-bottom: 10px;"></div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+                <button id="send-request-btn" class="btn btn-primary">Send Request</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+    <script>
+        var currentUser = getCurrentUser();
+        var selectedUserId = null;
+        var selectedSkillName = null;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            if (!currentUser) return;
+            
+            var firstName = currentUser.name.split(' ')[0];
+            document.getElementById('welcome-msg').textContent = "Hello, " + firstName + "! Ready to swap skills?";
+            
+            var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US', options);
+
+            loadDashboardData();
+        });
+
+        async function loadDashboardData() {
+            try {
+                var allUsers = await apiFetch("/users", "GET");
+                var otherUsers = [];
+                for (var i = 0; i < allUsers.length; i++) {
+                    if (allUsers[i].id !== currentUser.id) {
+                        otherUsers.push(allUsers[i]);
+                    }
+                }
+
+                var learnFromMatches = [];
+                for (var j = 0; j < otherUsers.length; j++) {
+                    var user = otherUsers[j];
+                    var hasMatch = false;
+                    for (var k = 0; k < user.skillsIKnow.length; k++) {
+                        if (currentUser.skillsIWantToLearn.indexOf(user.skillsIKnow[k]) !== -1) {
+                            hasMatch = true;
+                            break;
+                        }
+                    }
+                    if (hasMatch) learnFromMatches.push(user);
+                }
+
+                var teachSomeoneMatches = [];
+                for (var l = 0; l < otherUsers.length; l++) {
+                    var user = otherUsers[l];
+                    var hasMatch = false;
+                    for (var m = 0; m < user.skillsIWantToLearn.length; m++) {
+                        if (currentUser.skillsIKnow.indexOf(user.skillsIWantToLearn[m]) !== -1) {
+                            hasMatch = true;
+                            break;
+                        }
+                    }
+                    if (hasMatch) teachSomeoneMatches.push(user);
+                }
+
+                renderUserCards(learnFromMatches, "learn-list", "Ask for Help");
+                renderUserCards(teachSomeoneMatches, "teach-list", "Offer Help");
+
+            } catch (err) {
+                console.error("Dashboard error:", err);
+            }
+        }
+
+        function renderUserCards(usersList, containerId, buttonLabel) {
+            var container = document.getElementById(containerId);
+            container.innerHTML = "";
+
+            if (usersList.length === 0) {
+                container.innerHTML = '<div class="empty-state">No matches found yet. Keep learning!</div>';
+                return;
+            }
+
+            for (var i = 0; i < usersList.length; i++) {
+                var user = usersList[i];
+                var card = document.createElement("div");
+                card.className = "card user-card";
+                
+                var firstMatch = "Skill";
+                if (containerId === "learn-list") {
+                    for (var j = 0; j < user.skillsIKnow.length; j++) {
+                        if (currentUser.skillsIWantToLearn.indexOf(user.skillsIKnow[j]) !== -1) {
+                            firstMatch = user.skillsIKnow[j];
+                            break;
+                        }
+                    }
+                } else {
+                    for (var k = 0; k < user.skillsIWantToLearn.length; k++) {
+                        if (currentUser.skillsIKnow.indexOf(user.skillsIWantToLearn[k]) !== -1) {
+                            firstMatch = user.skillsIWantToLearn[k];
+                            break;
+                        }
+                    }
+                }
+
+                var html = '<div style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px;">';
+                html += '<div id="avatar-' + containerId + '-' + user.id + '"></div>';
+                html += '<div><h4 style="margin:0">' + user.name + '</h4>';
+                html += '<p class="small-labels">' + user.batch + ' • ' + user.year + '</p></div></div>';
+                html += '<p class="small-labels" style="margin-bottom: 10px;">Enrollment: ' + user.enrollmentNumber + '</p>';
+                html += '<div style="margin-bottom: 15px; height: 60px; overflow-y: auto;">';
+                for (var l = 0; l < user.skillsIKnow.length; l++) {
+                    html += '<span class="tag tag-know">' + user.skillsIKnow[l] + '</span>';
+                }
+                html += '</div>';
+                html += '<button class="btn btn-primary" style="width: 100%" id="btn-' + containerId + '-' + user.id + '">';
+                html += buttonLabel + '</button>';
+                
+                card.innerHTML = html;
+                container.appendChild(card);
+
+                var avatarDiv = document.getElementById('avatar-' + containerId + '-' + user.id);
+                avatarDiv.appendChild(createAvatarCircle(user.name, "sm"));
+
+                (function(uId, uName, match) {
+                    document.getElementById('btn-' + containerId + '-' + uId).onclick = function() {
+                        openRequestModal(uId, uName, match);
+                    };
+                })(user.id, user.name, firstMatch);
+            }
+        }
+
+        function openRequestModal(userId, name, skill) {
+            selectedUserId = userId;
+            selectedSkillName = skill;
+            var modal = document.getElementById('request-modal');
+            document.getElementById('modal-title').textContent = "Connect with " + name;
+            document.getElementById('modal-subtitle').textContent = "Topic: " + skill;
+            document.getElementById('request-msg').value = "";
+            document.getElementById('modal-error').textContent = "";
+            modal.style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById('request-modal').style.display = "none";
+        }
+
+        document.getElementById('send-request-btn').onclick = async function() {
+            var msgArea = document.getElementById('request-msg');
+            var errorText = document.getElementById('modal-error');
+            var btn = document.getElementById('send-request-btn');
+            var message = msgArea.value.trim();
+            if (!message) {
+                errorText.textContent = "Please write a message first.";
+                return;
+            }
+            try {
+                await apiFetch("/requests", "POST", {
+                    fromUserId: currentUser.id,
+                    toUserId: selectedUserId,
+                    skillNeeded: selectedSkillName,
+                    message: message
+                });
+                btn.textContent = "Request Sent! ✓";
+                btn.style.background = "#10b981";
+                setTimeout(function() {
+                    closeModal();
+                    btn.textContent = "Send Request";
+                    btn.style.background = "";
+                }, 1500);
+            } catch (err) {
+                errorText.textContent = "Failed to send. Try again.";
+            }
+        };
+
+        window.onclick = function(event) {
+            if (event.target.id === 'request-modal') closeModal();
+        };
+    </script>
+</body>
+</html>

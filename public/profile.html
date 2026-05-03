@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - SkillSwap</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* PROFILE PAGE SPECIFIC STYLES */
+        .profile-header {
+            background: var(--bg-card);
+            padding: 50px 30px;
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+        }
+        .profile-avatar-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .profile-info h1 { margin-bottom: 5px; }
+        .profile-info p { color: var(--text-light); }
+        
+        .section-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 15px;
+        }
+        .section-tab {
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-light);
+            padding: 8px 15px;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+        .section-tab.active {
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+        .request-card {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+        .request-content { flex: 1; }
+        .request-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div id="profile-view" class="animate-fade">
+        <div class="profile-header">
+            <div class="profile-avatar-container" id="profile-avatar-box"></div>
+            <div class="profile-info">
+                <h1 id="disp-name">Loading...</h1>
+                <p id="disp-meta"></p>
+                <p id="disp-bio" style="max-width: 600px; margin: 15px auto; color: var(--text-mid);"></p>
+            </div>
+            
+            <div style="margin-top: 30px;">
+                <div id="disp-know-tags"></div>
+                <div id="disp-learn-tags" style="margin-top: 10px;"></div>
+            </div>
+
+            <div id="disp-meet-section" style="margin-top: 25px;"></div>
+        </div>
+
+        <div class="container">
+            <div class="section-tabs">
+                <div class="section-tab active" id="tab-received" onclick="showSection('received')">Requests Received</div>
+                <div class="section-tab" id="tab-sent" onclick="showSection('sent')">Requests Sent</div>
+                <div class="section-tab" id="tab-edit" onclick="showSection('edit')">Edit Profile</div>
+            </div>
+
+            <div id="section-received" class="section-content">
+                <div id="received-list-box"></div>
+            </div>
+
+            <div id="section-sent" class="section-content hidden">
+                <div id="sent-list-box"></div>
+            </div>
+
+            <div id="section-edit" class="section-content hidden">
+                <div class="card" style="max-width: 600px; margin: 0 auto;">
+                    <form id="edit-form">
+                        <div class="form-group">
+                            <label>Bio (Short description about you)</label>
+                            <textarea id="edit-bio" maxlength="150" style="height: 100px;"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Google Meet Link (For teaching others)</label>
+                            <input type="url" id="edit-meet" placeholder="https://meet.google.com/xxx-xxxx-xxx">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        var currentUser = getCurrentUser();
+
+        document.addEventListener("DOMContentLoaded", function() {
+            if (!currentUser) return;
+            renderProfileHeader();
+            loadAllRequests();
+        });
+
+        function renderProfileHeader() {
+            document.getElementById('disp-name').textContent = currentUser.name;
+            document.getElementById('disp-meta').textContent = currentUser.enrollmentNumber + " • " + currentUser.batch + " • " + currentUser.year;
+            document.getElementById('disp-bio').textContent = currentUser.bio || "No bio added yet.";
+            
+            var avatarBox = document.getElementById('profile-avatar-box');
+            avatarBox.innerHTML = "";
+            avatarBox.appendChild(createAvatarCircle(currentUser.name, "lg"));
+
+            var knowBox = document.getElementById('disp-know-tags');
+            knowBox.innerHTML = "";
+            for (var i = 0; i < currentUser.skillsIKnow.length; i++) {
+                knowBox.appendChild(createSkillTag(currentUser.skillsIKnow[i], "know"));
+            }
+
+            var learnBox = document.getElementById('disp-learn-tags');
+            learnBox.innerHTML = "";
+            for (var j = 0; j < currentUser.skillsIWantToLearn.length; j++) {
+                learnBox.appendChild(createSkillTag(currentUser.skillsIWantToLearn[j], "learn"));
+            }
+
+            var meetBox = document.getElementById('disp-meet-section');
+            if (currentUser.googleMeetLink) {
+                var html = '<p class="small-labels">Your Meet Link:</p>';
+                html += '<a href="' + currentUser.googleMeetLink + '" target="_blank" style="color: var(--primary); font-weight: 600;">' + currentUser.googleMeetLink + '</a>';
+                meetBox.innerHTML = html;
+            } else {
+                meetBox.innerHTML = '<p class="small-labels">No meet link added yet.</p>';
+            }
+
+            document.getElementById('edit-bio').value = currentUser.bio || "";
+            document.getElementById('edit-meet').value = currentUser.googleMeetLink || "";
+        }
+
+        async function loadAllRequests() {
+            try {
+                var received = await apiFetch("/requests/" + currentUser.id, "GET");
+                var sent = await apiFetch("/requests/sent/" + currentUser.id, "GET");
+                renderRequestList(received, "received-list-box", true);
+                renderRequestList(sent, "sent-list-box", false);
+            } catch (err) {
+                console.error("Requests load failed:", err);
+            }
+        }
+
+        function renderRequestList(requestsArray, containerId, isReceived) {
+            var container = document.getElementById(containerId);
+            container.innerHTML = "";
+
+            if (requestsArray.length === 0) {
+                container.innerHTML = '<div class="empty-state">No requests found here.</div>';
+                return;
+            }
+
+            for (var i = 0; i < requestsArray.length; i++) {
+                var req = requestsArray[i];
+                var card = document.createElement("div");
+                card.className = "card request-card animate-fade";
+                
+                var otherPersonName = isReceived ? req.senderName : req.receiverName;
+                var otherPersonId = isReceived ? req.fromUserId : req.toUserId;
+
+                var html = '<div id="avatar-req-' + req.id + '"></div>';
+                html += '<div class="request-content">';
+                html += '<div class="request-meta"><h4 style="margin:0">' + otherPersonName + '</h4>';
+                html += '<span class="small-labels">' + timeAgo(req.timestamp) + '</span></div>';
+                html += '<p class="small-labels" style="color: var(--primary); font-weight: 700; margin-bottom: 5px;">Skill: ' + req.skillNeeded + '</p>';
+                html += '<p style="font-size: 14px; margin-bottom: 12px;">"' + req.message + '"</p>';
+                
+                if (isReceived) {
+                    html += '<button class="btn btn-primary" id="reply-btn-' + req.id + '">Reply in Chat</button>';
+                } else {
+                    html += '<button class="btn btn-secondary" id="cancel-btn-' + req.id + '" style="border-color: var(--danger); color: var(--danger);">Cancel Request</button>';
+                }
+                html += '</div>';
+                
+                card.innerHTML = html;
+                container.appendChild(card);
+                
+                document.getElementById('avatar-req-' + req.id).appendChild(createAvatarCircle(otherPersonName, "sm"));
+                
+                if (isReceived) {
+                    (function(targetId) {
+                        document.getElementById('reply-btn-' + req.id).onclick = function() {
+                            window.location.href = 'chat.html?with=' + targetId;
+                        };
+                    })(otherPersonId);
+                } else {
+                    (function(rId) {
+                        document.getElementById('cancel-btn-' + rId).onclick = async function() {
+                            if (confirm("Are you sure you want to cancel this request?")) {
+                                try {
+                                    await apiFetch("/requests/" + rId, "DELETE");
+                                    loadAllRequests();
+                                } catch (err) {
+                                    alert("Delete failed.");
+                                }
+                            }
+                        };
+                    })(req.id);
+                }
+            }
+        }
+
+        function showSection(sectionName) {
+            var sections = document.getElementsByClassName('section-content');
+            for (var i = 0; i < sections.length; i++) sections[i].classList.add('hidden');
+            var tabs = document.getElementsByClassName('section-tab');
+            for (var j = 0; j < tabs.length; j++) tabs[j].classList.remove('active');
+            
+            document.getElementById('section-' + sectionName).classList.remove('hidden');
+            document.getElementById('tab-' + sectionName).classList.add('active');
+        }
+
+        document.getElementById('edit-form').onsubmit = async function(e) {
+            e.preventDefault();
+            var newBio = document.getElementById('edit-bio').value;
+            var newMeet = document.getElementById('edit-meet').value;
+            try {
+                var updatedUser = await apiFetch("/users/" + currentUser.id, "PUT", { bio: newBio, googleMeetLink: newMeet });
+                localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+                alert("Profile updated successfully!");
+                location.reload(); 
+            } catch (err) {
+                alert("Update failed: " + err.message);
+            }
+        };
+    </script>
+</body>
+</html>
