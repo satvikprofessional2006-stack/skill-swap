@@ -156,6 +156,26 @@ function renderNavbar() {
     
     navElement.innerHTML = html;
     document.body.prepend(navElement);
+
+    // MOBILE BOTTOM NAVIGATION (Added for "Mobile Perfection")
+    var mobileNav = document.createElement("div");
+    mobileNav.className = "mobile-bottom-nav";
+    
+    var mHtml = '<a href="dashboard.html"><span>🏠</span>Home</a>';
+    mHtml += '<a href="search.html"><span>🔍</span>Search</a>';
+    mHtml += '<a href="chat.html"><span>💬</span>Chat</a>';
+    mHtml += '<a href="profile.html"><span>👤</span>Profile</a>';
+    
+    mobileNav.innerHTML = mHtml;
+    document.body.appendChild(mobileNav);
+
+    // Mark the active link in bottom nav
+    var links = mobileNav.getElementsByTagName('a');
+    for (var i = 0; i < links.length; i++) {
+        if (window.location.pathname.indexOf(links[i].getAttribute('href')) !== -1) {
+            links[i].className = "active";
+        }
+    }
     
     var avatarPlaceholder = document.getElementById("nav-avatar-placeholder");
     if (avatarPlaceholder) {

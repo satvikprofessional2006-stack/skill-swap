@@ -290,8 +290,61 @@ input:focus {
 
   /* Navbar adjustments */
   .nav-content {
-    justify-content: center;
-    flex-direction: column;
-    gap: 10px;
+    justify-content: space-between;
+    padding: 0 10px;
   }
+  
+  .nav-user span { display: none; } /* Hide name to save space */
+  
+  /* MOBILE BOTTOM NAVIGATION */
+  .mobile-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-sidebar);
+    display: flex;
+    justify-content: space-around;
+    padding: 12px 0;
+    z-index: 2000;
+    border-top: 1px solid rgba(255,255,255,0.1);
+  }
+  
+  .mobile-bottom-nav a {
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .mobile-bottom-nav a.active {
+    color: var(--white);
+    font-weight: 700;
+  }
+
+  /* Padding for the bottom nav */
+  body { padding-bottom: 70px; }
+
+  /* Chat Mobile Adjustments */
+  .chat-container {
+    flex-direction: column;
+    height: calc(100vh - 140px);
+  }
+  .chat-sidebar {
+    width: 100%;
+    height: 40%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .chat-main {
+    height: 60%;
+  }
+}
+
+/* Hide mobile nav on desktop */
+@media (min-width: 769px) {
+  .mobile-bottom-nav { display: none; }
 }
